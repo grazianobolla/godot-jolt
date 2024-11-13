@@ -592,6 +592,8 @@ public:
 
 	void _init() override;
 
+	void simulate(double p_step);
+
 	void _step(double p_step) override;
 
 	void _sync() override { }

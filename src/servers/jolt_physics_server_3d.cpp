@@ -83,6 +83,8 @@ void JoltPhysicsServer3D::_bind_methods() {
 	BIND_METHOD(JoltPhysicsServer3D, generic_6dof_joint_get_applied_force, "joint");
 	BIND_METHOD(JoltPhysicsServer3D, generic_6dof_joint_get_applied_torque, "joint");
 
+	BIND_METHOD(JoltPhysicsServer3D, simulate, "step");
+
 	// clang-format on
 
 	BIND_ENUM_CONSTANT(HINGE_JOINT_LIMIT_SPRING_FREQUENCY);
@@ -1883,6 +1885,11 @@ void JoltPhysicsServer3D::_set_active(bool p_active) {
 
 void JoltPhysicsServer3D::_init() {
 	job_system = new JoltJobSystem();
+}
+
+void JoltPhysicsServer3D::simulate(double p_step) {
+	_flush_queries();
+	_step(p_step);
 }
 
 void JoltPhysicsServer3D::_step(double p_step) {
