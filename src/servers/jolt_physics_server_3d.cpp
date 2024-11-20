@@ -84,6 +84,8 @@ void JoltPhysicsServer3D::_bind_methods() {
 	BIND_METHOD(JoltPhysicsServer3D, generic_6dof_joint_get_applied_torque, "joint");
 
 	BIND_METHOD(JoltPhysicsServer3D, simulate, "step");
+	BIND_METHOD(JoltPhysicsServer3D, space_step, "space", "step");
+	BIND_METHOD(JoltPhysicsServer3D, space_flush_queries, "space");
 
 	// clang-format on
 
@@ -1890,6 +1892,32 @@ void JoltPhysicsServer3D::_init() {
 void JoltPhysicsServer3D::simulate(double p_step) {
 	_flush_queries();
 	_step(p_step);
+}
+
+void JoltPhysicsServer3D::space_flush_queries(const RID& p_space) {
+	if (!active) {
+		return;
+	}
+
+	JoltSpace3D* space = space_owner.get_or_null(p_space);
+	ERR_FAIL_NULL(space);
+
+	flushing_queries = true;
+	space->call_queries();
+	flushing_queries = false;
+}
+
+void JoltPhysicsServer3D::space_step(const RID& p_space, double p_step) {
+	if (!active) {
+		return;
+	}
+
+	JoltSpace3D* space = space_owner.get_or_null(p_space);
+	ERR_FAIL_NULL(space);
+
+	job_system->pre_step();
+	space->step((float)p_step);
+	job_system->post_step();
 }
 
 void JoltPhysicsServer3D::_step(double p_step) {

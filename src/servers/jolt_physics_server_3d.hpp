@@ -594,6 +594,10 @@ public:
 
 	void simulate(double p_step);
 
+	void space_step(const RID& p_space, double p_step);
+
+	void space_flush_queries(const RID& p_space);
+
 	void _step(double p_step) override;
 
 	void _sync() override { }
