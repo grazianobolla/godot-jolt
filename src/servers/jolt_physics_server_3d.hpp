@@ -592,6 +592,10 @@ public:
 
 	void _init() override;
 
+	godot::PackedByteArray save_body_state(const RID& p_space, const RID& p_body);
+
+	void restore_body_state(const RID& p_space, const RID& p_body, godot::PackedByteArray p_state);
+
 	void simulate(double p_step);
 
 	void space_step(const RID& p_space, double p_step);

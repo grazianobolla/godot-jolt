@@ -22,6 +22,8 @@
 #include "spaces/jolt_physics_direct_space_state_3d.hpp"
 #include "spaces/jolt_space_3d.hpp"
 
+#include <Jolt/Physics/StateRecorderImpl.h>
+
 namespace {
 
 constexpr char PHYSICS_SERVER_NAME[] = "JoltPhysicsServer3D";
@@ -86,6 +88,9 @@ void JoltPhysicsServer3D::_bind_methods() {
 	BIND_METHOD(JoltPhysicsServer3D, simulate, "step");
 	BIND_METHOD(JoltPhysicsServer3D, space_step, "space", "step");
 	BIND_METHOD(JoltPhysicsServer3D, space_flush_queries, "space");
+
+	BIND_METHOD(JoltPhysicsServer3D, save_body_state, "space", "body");
+	BIND_METHOD(JoltPhysicsServer3D, restore_body_state, "space", "body", "state");
 
 	// clang-format on
 
@@ -1887,6 +1892,62 @@ void JoltPhysicsServer3D::_set_active(bool p_active) {
 
 void JoltPhysicsServer3D::_init() {
 	job_system = new JoltJobSystem();
+}
+
+godot::PackedByteArray JoltPhysicsServer3D::save_body_state(const RID& p_space, const RID& p_body) {
+	JoltSpace3D* space = space_owner.get_or_null(p_space);
+	ERR_FAIL_NULL(space);
+
+	JPH::BodyID jolt_body_id = body_owner.get_or_null(p_body)->get_jolt_id();
+
+	JPH::StateRecorderImpl state_recorder;
+
+	const JPH::BodyLockInterfaceNoLock& nolock_interface = space->get_physics_system().GetBodyLockInterfaceNoLock();
+
+	{
+		JPH::BodyLockRead lock(nolock_interface, jolt_body_id);
+		if (lock.Succeeded()) {
+			const JPH::Body& body = lock.GetBody();
+			space->get_physics_system().SaveBodyState(body, state_recorder);
+		}
+	}
+
+	// Extract data from StateRecorder & Load into PackedByteArray
+	std::string body_state_string = state_recorder.GetData();
+	size_t body_state_data_size = body_state_string.size();
+
+	godot::PackedByteArray res_byte_array;
+	res_byte_array.resize(body_state_data_size);
+
+	for (int64_t i = 0; i < body_state_data_size; i++) {
+		res_byte_array.set(i, body_state_string[i]);
+	}
+
+	return res_byte_array;
+}
+
+void JoltPhysicsServer3D::restore_body_state(
+	const RID& p_space,
+	const RID& p_body,
+	godot::PackedByteArray p_state
+) {
+	JoltSpace3D* space = space_owner.get_or_null(p_space);
+	ERR_FAIL_NULL(space);
+
+	JPH::BodyID jolt_body_id = body_owner.get_or_null(p_body)->get_jolt_id();
+
+	JPH::StateRecorderImpl state_recorder;
+	state_recorder.WriteBytes(p_state.ptr(), p_state.size());
+
+	const JPH::BodyLockInterface& nolock_interface = space->get_physics_system().GetBodyLockInterface();
+
+	{
+		JPH::BodyLockWrite lock(nolock_interface, jolt_body_id);
+		if (lock.Succeeded()) {
+			JPH::Body& body = lock.GetBody();
+			space->get_physics_system().RestoreBodyState(body, state_recorder);
+		}
+	}
 }
 
 void JoltPhysicsServer3D::simulate(double p_step) {
