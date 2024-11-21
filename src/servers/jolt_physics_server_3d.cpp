@@ -1896,7 +1896,6 @@ void JoltPhysicsServer3D::_init() {
 
 godot::PackedByteArray JoltPhysicsServer3D::save_body_state(const RID& p_space, const RID& p_body) {
 	JoltSpace3D* space = space_owner.get_or_null(p_space);
-	ERR_FAIL_NULL(space);
 
 	JPH::BodyID jolt_body_id = body_owner.get_or_null(p_body)->get_jolt_id();
 
